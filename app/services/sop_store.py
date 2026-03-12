@@ -1,5 +1,12 @@
 """
-Persist SOP records as JSON index + markdown files on disk.
+Persist SOP records as JSON index + versioned markdown files on disk.
+
+Layout:
+  app/sops/
+    index.json                  — list of all SOP records
+    <slug>/
+      current.md                — latest version
+      v1.md, v2.md, …           — version history snapshots
 """
 import json
 import os
@@ -32,16 +39,30 @@ def _save_index(records: List[Dict]) -> None:
         json.dump(records, f, indent=2)
 
 
+def _sop_dir(slug: str) -> Path:
+    d = SOP_DIR / slug
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _write_version(slug: str, markdown: str, version: int) -> None:
+    d = _sop_dir(slug)
+    with open(d / f"v{version}.md", "w", encoding="utf-8") as f:
+        f.write(markdown)
+    with open(d / "current.md", "w", encoding="utf-8") as f:
+        f.write(markdown)
+
+
 def save_sop(
     title: str,
     markdown: str,
     source_filename: str,
     source_type: str,
     tags: Optional[List[str]] = None,
+    author: str = "system",
 ) -> Dict:
     records = _load_index()
     slug = _slug(title)
-    # Avoid collisions
     existing_slugs = {r["slug"] for r in records}
     base_slug = slug
     counter = 1
@@ -50,6 +71,7 @@ def save_sop(
         counter += 1
 
     now = datetime.utcnow().isoformat() + "Z"
+    version_entry = {"version": 1, "created_at": now, "author": author, "note": "Initial version"}
     record = {
         "id": slug,
         "slug": slug,
@@ -59,19 +81,24 @@ def save_sop(
         "tags": tags or [],
         "created_at": now,
         "updated_at": now,
-        "markdown_file": f"{slug}.md",
+        "current_version": 1,
+        "versions": [version_entry],
     }
 
-    md_path = SOP_DIR / f"{slug}.md"
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write(markdown)
-
+    _write_version(slug, markdown, 1)
     records.append(record)
     _save_index(records)
     return record
 
 
-def update_sop(slug: str, title: str, markdown: str, tags: Optional[List[str]] = None) -> Optional[Dict]:
+def update_sop(
+    slug: str,
+    title: str,
+    markdown: str,
+    tags: Optional[List[str]] = None,
+    author: str = "user",
+    note: str = "",
+) -> Optional[Dict]:
     records = _load_index()
     for r in records:
         if r["slug"] == slug:
@@ -79,9 +106,16 @@ def update_sop(slug: str, title: str, markdown: str, tags: Optional[List[str]] =
             r["updated_at"] = datetime.utcnow().isoformat() + "Z"
             if tags is not None:
                 r["tags"] = tags
-            md_path = SOP_DIR / r["markdown_file"]
-            with open(md_path, "w", encoding="utf-8") as f:
-                f.write(markdown)
+            new_version = r.get("current_version", 1) + 1
+            r["current_version"] = new_version
+            version_entry = {
+                "version": new_version,
+                "created_at": r["updated_at"],
+                "author": author,
+                "note": note or f"Updated to v{new_version}",
+            }
+            r.setdefault("versions", []).append(version_entry)
+            _write_version(slug, markdown, new_version)
             _save_index(records)
             return r
     return None
@@ -92,24 +126,42 @@ def delete_sop(slug: str) -> bool:
     new_records = [r for r in records if r["slug"] != slug]
     if len(new_records) == len(records):
         return False
-    removed = next(r for r in records if r["slug"] == slug)
-    md_path = SOP_DIR / removed["markdown_file"]
-    if md_path.exists():
-        md_path.unlink()
+    import shutil
+    sop_path = SOP_DIR / slug
+    if sop_path.exists():
+        shutil.rmtree(sop_path)
     _save_index(new_records)
     return True
 
 
-def get_sop(slug: str) -> Optional[Dict]:
+def get_sop(slug: str, version: Optional[int] = None) -> Optional[Dict]:
     records = _load_index()
     for r in records:
         if r["slug"] == slug:
-            md_path = SOP_DIR / r["markdown_file"]
+            d = _sop_dir(slug)
+            if version:
+                md_path = d / f"v{version}.md"
+            else:
+                md_path = d / "current.md"
+                # Backward compat: old flat file layout
+                if not md_path.exists():
+                    old = SOP_DIR / r.get("markdown_file", f"{slug}.md")
+                    if old.exists():
+                        md_path = old
             content = ""
             if md_path.exists():
                 with open(md_path, encoding="utf-8") as f:
                     content = f.read()
-            return {**r, "markdown": content}
+            return {**r, "markdown": content, "viewed_version": version or r.get("current_version", 1)}
+    return None
+
+
+def get_version_markdown(slug: str, version: int) -> Optional[str]:
+    d = SOP_DIR / slug
+    md_path = d / f"v{version}.md"
+    if md_path.exists():
+        with open(md_path, encoding="utf-8") as f:
+            return f.read()
     return None
 
 

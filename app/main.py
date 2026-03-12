@@ -9,14 +9,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.routers.sops import router as sops_router
+from app.routers.chat import router as chat_router
 
-app = FastAPI(title="SOP Manager Agent", version="1.0.0")
+app = FastAPI(title="SOP Manager Agent", version="2.0.0")
 
 BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 app.include_router(sops_router)
+app.include_router(chat_router)
 
 
 @app.get("/", response_class=HTMLResponse)

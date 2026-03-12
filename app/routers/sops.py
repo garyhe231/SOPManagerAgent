@@ -1,17 +1,18 @@
 """
-FastAPI routes for SOP CRUD and file upload/processing.
+FastAPI routes for SOP CRUD, file upload/processing, and version history.
 """
 import os
 import tempfile
 from typing import List, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse
 
 from app.services.extractor import extract_text
 from app.services.ai_translator import translate_to_sop
 from app.services.sop_store import (
-    save_sop, update_sop, delete_sop, get_sop, list_sops, all_tags
+    save_sop, update_sop, delete_sop, get_sop,
+    get_version_markdown, list_sops, all_tags
 )
 
 router = APIRouter(prefix="/api/sops", tags=["sops"])
@@ -33,7 +34,6 @@ async def upload_and_process(
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(400, f"File type '{ext}' not supported.")
 
-    # Determine source type label
     if ext == ".pdf":
         source_type = "PDF"
     elif ext in (".docx", ".doc"):
@@ -45,7 +45,6 @@ async def upload_and_process(
     else:
         source_type = "Text File"
 
-    # Save upload to temp file
     with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         content = await file.read()
         tmp.write(content)
@@ -75,6 +74,26 @@ async def get_tags():
     return all_tags()
 
 
+@router.get("/{slug}/versions/{version}/download")
+async def download_version(slug: str, version: int):
+    md = get_version_markdown(slug, version)
+    if md is None:
+        raise HTTPException(404, "Version not found.")
+    return PlainTextResponse(
+        content=md,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{slug}-v{version}.md"'},
+    )
+
+
+@router.get("/{slug}/versions/{version}")
+async def get_version(slug: str, version: int):
+    sop = get_sop(slug, version=version)
+    if not sop:
+        raise HTTPException(404, "SOP not found.")
+    return sop
+
+
 @router.get("/{slug}")
 async def get_one(slug: str):
     sop = get_sop(slug)
@@ -91,14 +110,21 @@ async def download_markdown(slug: str):
     return PlainTextResponse(
         content=sop["markdown"],
         media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="{sop["slug"]}.md"'},
+        headers={"Content-Disposition": f'attachment; filename="{sop["slug"]}-v{sop.get("current_version",1)}.md"'},
     )
 
 
 @router.put("/{slug}")
-async def update_one(slug: str, title: str = Form(""), markdown: str = Form(""), tags: str = Form("")):
+async def update_one(
+    slug: str,
+    title: str = Form(""),
+    markdown: str = Form(""),
+    tags: str = Form(""),
+    author: str = Form("user"),
+    note: str = Form(""),
+):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
-    record = update_sop(slug, title, markdown, tag_list)
+    record = update_sop(slug, title, markdown, tag_list, author=author, note=note)
     if not record:
         raise HTTPException(404, "SOP not found.")
     return {"success": True, "sop": record}
