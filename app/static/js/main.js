@@ -10,6 +10,10 @@ const uploadBtn = document.getElementById('uploadBtn');
 const uploadBtnText = document.getElementById('uploadBtnText');
 const uploadSpinner = document.getElementById('uploadSpinner');
 const uploadResult = document.getElementById('uploadResult');
+const progressWrap = document.getElementById('progressWrap');
+const progressBar  = document.getElementById('progressBar');
+const progressPct  = document.getElementById('progressPct');
+const progressStage= document.getElementById('progressStage');
 const searchInput = document.getElementById('searchInput');
 const tagFilter = document.getElementById('tagFilter');
 const refreshBtn = document.getElementById('refreshBtn');
@@ -41,6 +45,49 @@ function showFile(name) {
   fileSelected.textContent = '✓ ' + name;
 }
 
+// --- Progress simulation ---
+// Stages: [label, target %, min ms to hold before advancing]
+const STAGES = [
+  { label: 'Uploading file…',           pct: 10,  hold: 400  },
+  { label: 'Extracting content…',       pct: 30,  hold: 800  },
+  { label: 'Analysing with Claude…',    pct: 55,  hold: 2000 },
+  { label: 'Generating SOP structure…', pct: 75,  hold: 2000 },
+  { label: 'Writing markdown…',         pct: 90,  hold: 1000 },
+];
+
+let _progressTimer = null;
+
+function startProgress() {
+  progressWrap.classList.remove('hidden');
+  uploadResult.classList.add('hidden');
+  progressBar.classList.remove('done');
+  setProgress(0, '');
+  let i = 0;
+
+  function advance() {
+    if (i >= STAGES.length) return;
+    const s = STAGES[i++];
+    setProgress(s.pct, s.label);
+    _progressTimer = setTimeout(advance, s.hold);
+  }
+  advance();
+}
+
+function setProgress(pct, label) {
+  progressBar.style.width = pct + '%';
+  progressPct.textContent = pct + '%';
+  if (label) progressStage.textContent = label;
+}
+
+function finishProgress(success) {
+  clearTimeout(_progressTimer);
+  if (success) {
+    progressBar.classList.add('done');
+    setProgress(100, 'Done!');
+  }
+  setTimeout(() => progressWrap.classList.add('hidden'), 1200);
+}
+
 // --- Upload ---
 uploadForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -50,18 +97,21 @@ uploadForm.addEventListener('submit', async (e) => {
   uploadBtnText.textContent = 'Processing…';
   uploadSpinner.classList.remove('hidden');
   uploadResult.classList.add('hidden');
+  startProgress();
 
   const fd = new FormData(uploadForm);
   try {
     const res = await fetch('/api/sops/upload', { method: 'POST', body: fd });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Upload failed');
+    finishProgress(true);
     showResult('success', `SOP "${data.sop.title}" generated successfully! <a href="/sop/${data.sop.slug}" style="color:inherit;text-decoration:underline">View it &rarr;</a>`);
     uploadForm.reset();
     dropLabel.classList.remove('hidden');
     fileSelected.classList.add('hidden');
     loadSOPs();
   } catch (err) {
+    finishProgress(false);
     showResult('error', '✗ ' + err.message);
   } finally {
     uploadBtn.disabled = false;

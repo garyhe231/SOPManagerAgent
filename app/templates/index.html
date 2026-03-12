@@ -45,6 +45,18 @@
         <span id="uploadSpinner" class="spinner hidden"></span>
       </button>
     </form>
+
+    <!-- Progress bar (shown during processing) -->
+    <div id="progressWrap" class="progress-wrap hidden">
+      <div class="progress-header">
+        <span id="progressStage">Uploading file…</span>
+        <span id="progressPct" class="progress-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+
     <div id="uploadResult" class="upload-result hidden"></div>
   </section>
 
