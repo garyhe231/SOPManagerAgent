@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SOP Manager Agent</title>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="logo">SOP Manager Agent</span>
+    <span class="tagline">Collect · Translate · Centralize</span>
+  </div>
+</header>
+
+<main class="container">
+  <!-- Upload Panel -->
+  <section class="card upload-card">
+    <h2>Upload Source Document</h2>
+    <p class="hint">Supported: PDF, Word (.docx), Excel (.xlsx), Video/Audio (.mp4, .mov, .mp3, .wav, …)</p>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <div class="form-row">
+        <div class="file-drop" id="fileDrop">
+          <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.mp4,.mov,.avi,.mkv,.webm,.m4v,.mp3,.wav,.m4a,.txt" required hidden/>
+          <div class="drop-label" id="dropLabel">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Drop file here or <button type="button" class="link-btn" id="browseBtn">browse</button></span>
+          </div>
+          <div class="file-selected hidden" id="fileSelected"></div>
+        </div>
+      </div>
+      <div class="form-row two-col">
+        <div class="field">
+          <label>SOP Title (optional)</label>
+          <input type="text" name="title" id="titleInput" placeholder="Auto-detected from filename"/>
+        </div>
+        <div class="field">
+          <label>Tags (comma-separated)</label>
+          <input type="text" name="tags" id="tagsInput" placeholder="e.g. shipping, onboarding"/>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="uploadBtn">
+        <span id="uploadBtnText">Process &amp; Generate SOP</span>
+        <span id="uploadSpinner" class="spinner hidden"></span>
+      </button>
+    </form>
+    <div id="uploadResult" class="upload-result hidden"></div>
+  </section>
+
+  <!-- Library -->
+  <section class="card library-card">
+    <div class="library-header">
+      <h2>SOP Library</h2>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Search SOPs…" class="search-input"/>
+        <select id="tagFilter" class="tag-select">
+          <option value="">All Tags</option>
+        </select>
+        <button class="btn-ghost" id="refreshBtn" title="Refresh">&#8635;</button>
+      </div>
+    </div>
+    <div id="sopList" class="sop-list">
+      <div class="empty-state">Loading…</div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

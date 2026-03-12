@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SOP Detail — SOP Manager Agent</title>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/" class="back-link">&#8592; SOP Library</a>
+    <span class="logo">SOP Manager Agent</span>
+    <div class="topbar-actions">
+      <button class="btn-ghost" id="editBtn">Edit</button>
+      <button class="btn-ghost" id="downloadBtn">Download .md</button>
+      <button class="btn-danger" id="deleteBtn">Delete</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div id="viewMode">
+    <div class="sop-meta" id="sopMeta"></div>
+    <div class="card sop-content" id="sopContent">Loading…</div>
+  </div>
+
+  <div id="editMode" class="hidden">
+    <div class="card edit-card">
+      <h2>Edit SOP</h2>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="editTitle" class="edit-title-input"/>
+      </div>
+      <div class="field">
+        <label>Tags (comma-separated)</label>
+        <input type="text" id="editTags" class="edit-tags-input"/>
+      </div>
+      <div class="field">
+        <label>Markdown Content</label>
+        <textarea id="editMarkdown" class="edit-textarea"></textarea>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-primary" id="saveBtn">Save Changes</button>
+        <button class="btn-ghost" id="cancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script id="slugScript" data-slug="{{ slug }}"></script>
+<script src="/static/js/detail.js"></script>
+</body>
+</html>
