@@ -75,7 +75,8 @@ function renderBody(text) {
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // Headings (h3 only — h1/h2 handled above)
+  // Headings (h3/h4 — h1/h2 handled above)
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
 
   // Bold / italic
@@ -127,8 +128,8 @@ function renderBody(text) {
   // Paragraphs
   html = html.replace(/\n\n+/g, '</p><p>');
   html = '<p>' + html + '</p>';
-  html = html.replace(/<p>(<(?:h3|ul|ol|table|pre|hr|blockquote|div)[^>]*>)/g, '$1');
-  html = html.replace(/(<\/(?:h3|ul|ol|table|pre|hr|blockquote|div)>)<\/p>/g, '$1');
+  html = html.replace(/<p>(<(?:h3|h4|ul|ol|table|pre|hr|blockquote|div)[^>]*>)/g, '$1');
+  html = html.replace(/(<\/(?:h3|h4|ul|ol|table|pre|hr|blockquote|div)>)<\/p>/g, '$1');
   html = html.replace(/<p>\s*<\/p>/g, '');
   html = html.replace(/<p>\n/g, '<p>');
 
@@ -155,7 +156,7 @@ function toggleSection(id) {
 
 function buildTOC(contentEl, tocEl) {
   tocEl.innerHTML = '';
-  const headings = contentEl.querySelectorAll('h1, h2, h3');
+  const headings = contentEl.querySelectorAll('h1, h2, h3, h4');
   headings.forEach(h => {
     const level = parseInt(h.tagName[1]);
     const link = document.createElement('span');
