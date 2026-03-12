@@ -11,7 +11,8 @@ const editMode    = document.getElementById('editMode');
 const editBtn     = document.getElementById('editBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const deleteBtn   = document.getElementById('deleteBtn');
-const versionsBtn = document.getElementById('versionsBtn');
+const versionsBtn  = document.getElementById('versionsBtn');
+const exportPdfBtn = document.getElementById('exportPdfBtn');
 const editTitle   = document.getElementById('editTitle');
 const editTags    = document.getElementById('editTags');
 const editNote    = document.getElementById('editNote');
@@ -116,6 +117,19 @@ saveBtn.addEventListener('click', async () => {
 // ─── Download ─────────────────────────────────────────────
 downloadBtn.addEventListener('click', () => {
   window.location.href = '/api/sops/' + slug + '/download';
+});
+
+// ─── Export PDF ───────────────────────────────────────────
+exportPdfBtn.addEventListener('click', async () => {
+  exportPdfBtn.disabled = true;
+  exportPdfBtn.textContent = '⏳ Generating PDF…';
+  try {
+    window.location.href = '/api/sops/' + slug + '/export/pdf';
+    await new Promise(r => setTimeout(r, 3000));
+  } finally {
+    exportPdfBtn.disabled = false;
+    exportPdfBtn.innerHTML = '&#128196; Export PDF';
+  }
 });
 
 // ─── Delete ───────────────────────────────────────────────

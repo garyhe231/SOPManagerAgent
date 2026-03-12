@@ -6,7 +6,7 @@ import tempfile
 from typing import List, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 
 from app.services.extractor import extract_text
 from app.services.ai_translator import translate_to_sop
@@ -14,6 +14,7 @@ from app.services.sop_store import (
     save_sop, update_sop, delete_sop, get_sop,
     get_version_markdown, list_sops, all_tags
 )
+from app.services.pdf_exporter import markdown_to_pdf
 
 router = APIRouter(prefix="/api/sops", tags=["sops"])
 
@@ -100,6 +101,27 @@ async def get_one(slug: str):
     if not sop:
         raise HTTPException(404, "SOP not found.")
     return sop
+
+
+@router.get("/{slug}/export/pdf")
+async def export_pdf(slug: str):
+    sop = get_sop(slug)
+    if not sop:
+        raise HTTPException(404, "SOP not found.")
+    pdf_bytes = await markdown_to_pdf(
+        markdown=sop["markdown"],
+        title=sop["title"],
+        source_filename=sop["source_filename"],
+        source_type=sop["source_type"],
+        tags=sop.get("tags", []),
+        version=sop.get("current_version", 1),
+        updated_at=sop.get("updated_at", ""),
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{sop["slug"]}-v{sop.get("current_version",1)}.pdf"'},
+    )
 
 
 @router.get("/{slug}/download")
