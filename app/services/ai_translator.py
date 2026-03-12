@@ -1,9 +1,49 @@
 """
-Use Claude to translate raw extracted text into a structured SOP markdown document.
+Use Claude via AWS Bedrock to translate raw extracted text into a structured SOP markdown document.
 """
-import anthropic
+import json
+import os
 
-_client = anthropic.Anthropic()
+import boto3
+from botocore.config import Config
+
+_MODEL = (
+    os.getenv("ANTHROPIC_DEFAULT_OPUS_MODEL")
+    or os.getenv("ANTHROPIC_DEFAULT_SONNET_MODEL")
+    or "anthropic.claude-opus-4-6"
+)
+_AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+
+_bedrock = None
+
+
+def _get_client():
+    global _bedrock
+    if _bedrock is None:
+        _bedrock = boto3.client(
+            "bedrock-runtime",
+            region_name=_AWS_REGION,
+            config=Config(read_timeout=120, connect_timeout=10),
+        )
+    return _bedrock
+
+
+def _invoke(system: str, user: str, max_tokens: int = 4096) -> str:
+    body = json.dumps({
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    })
+    resp = _get_client().invoke_model(
+        modelId=_MODEL,
+        body=body,
+        contentType="application/json",
+        accept="application/json",
+    )
+    result = json.loads(resp["body"].read())
+    return result["content"][0]["text"]
+
 
 SYSTEM_PROMPT = """You are an expert technical writer specializing in Standard Operating Procedures (SOPs).
 Your task is to convert raw text extracted from documents (PDFs, Word docs, spreadsheets, video transcripts)
@@ -63,10 +103,4 @@ def translate_to_sop(raw_text: str, filename: str, title_hint: str = "") -> str:
 
 Generate the complete SOP markdown now:"""
 
-    message = _client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=4096,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return message.content[0].text
+    return _invoke(SYSTEM_PROMPT, prompt, max_tokens=4096)
